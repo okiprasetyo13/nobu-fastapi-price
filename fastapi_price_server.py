@@ -1,9 +1,10 @@
-# fastapi_price_server.py
+
 from fastapi import FastAPI
 import uvicorn
 import threading
 import websocket
 import json
+import requests  # ✅ Add this
 
 app = FastAPI()
 latest_prices = {}

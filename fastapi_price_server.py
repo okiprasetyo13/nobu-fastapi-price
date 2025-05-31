@@ -18,26 +18,29 @@ from datetime import datetime
 import pandas as pd
 
 @app.get("/ohlcv/{symbol}")
-async def get_ohlcv(symbol: str, granularity: int = 60, limit: int = 50):
-    """
-    Returns OHLCV data from Coinbase in JSON format.
-    - symbol: e.g., BTC-USD
-    - granularity: 60 = 1-minute candles
-    - limit: number of rows to return
-    """
-    url = f"https://api.exchange.coinbase.com/products/{symbol}/candles?granularity={granularity}"
+def get_ohlcv(symbol: str):
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            data = response.json()
+        # Correct Coinbase product format
+        product_id = f"{symbol.upper()}-USD"
+        url = f"https://api.exchange.coinbase.com/products/{product_id}/candles?granularity=60"
 
-        df = pd.DataFrame(data, columns=["time", "low", "high", "open", "close", "volume"])
-        df["time"] = pd.to_datetime(df["time"], unit="s")
-        df = df.sort_values("time")
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        response.raise_for_status()
+        data = response.json()
 
-        result = df.tail(limit).to_dict(orient="records")
-        return {"symbol": symbol, "ohlcv": result}
+        ohlcv = []
+        for candle in data:
+            ohlcv.append({
+                "time": candle[0],
+                "low": candle[1],
+                "high": candle[2],
+                "open": candle[3],
+                "close": candle[4],
+                "volume": candle[5]
+            })
+
+        return ohlcv[::-1]  # Optional: reverse to show oldest to newest
+
     except Exception as e:
         return {"error": str(e)}
 

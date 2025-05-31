@@ -13,6 +13,34 @@ SYMBOLS = [
     "DOGE-USD", "MATIC-USD", "INJ-USD", "SHIB-USD", "RNDR-USD", "APT-USD", "ARB-USD"
 ]
 
+import httpx
+from datetime import datetime
+import pandas as pd
+
+@app.get("/ohlcv/{symbol}")
+async def get_ohlcv(symbol: str, granularity: int = 60, limit: int = 50):
+    """
+    Returns OHLCV data from Coinbase in JSON format.
+    - symbol: e.g., BTC-USD
+    - granularity: 60 = 1-minute candles
+    - limit: number of rows to return
+    """
+    url = f"https://api.exchange.coinbase.com/products/{symbol}/candles?granularity={granularity}"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+        df = pd.DataFrame(data, columns=["time", "low", "high", "open", "close", "volume"])
+        df["time"] = pd.to_datetime(df["time"], unit="s")
+        df = df.sort_values("time")
+
+        result = df.tail(limit).to_dict(orient="records")
+        return {"symbol": symbol, "ohlcv": result}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/price/{symbol}")
 def get_price(symbol: str):
     product_id = f"{symbol.upper()}-USD"

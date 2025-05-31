@@ -3,3 +3,4 @@ uvicorn
 websocket-client
 httpx
 pandas
+requests
